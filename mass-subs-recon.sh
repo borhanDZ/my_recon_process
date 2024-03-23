@@ -78,7 +78,7 @@ function Subfinder {
 function Assetfinder {
 	clear
 	echo -e ${yellow}"\n[+] Assetfinder Enumeration Started:- "
-  https://youtu.be/7AxNOn7dgfk?t=306  assetfinder -subs-only $domain | tee $domain/domain_enum/assetfinder.txt
+        assetfinder -subs-only $domain | tee $domain/domain_enum/assetfinder.txt
 }
 
 
