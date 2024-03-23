@@ -1,0 +1,8 @@
+old-subs-scan.txt # old scan for example get subdomains of yahoo.com in 2020
+new-subs-scan.txt # new scan yahoo.com in 2023
+
+we going to extract what new subs added in new-subs-scan.txt and subs removed from old-subs-scan.txt if found 
+#new subdomains 
+grep -vf old-subs-scan.txt new-subs-scan.txt > new-added-subs.txt
+#removed subdomains
+grep -vf new-subs-scan.txt old-subs-scan.txt > new-added-subs.txt
