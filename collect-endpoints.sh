@@ -41,7 +41,7 @@ github-endpoints -q -k -d target.com -t git_token -o $domain/endp/github-endpoin
 #porch-pirate -s $domain --urls > porch-pirate-urls
 #active: katana from reconftw project .. https://github.com/six2dez/reconftw
 if [[ -s "$domain/final_domains/all-httpx" ]]; then
-   cat all-httpx | katana -jc -kf all -d 3 -fs rdn -rlm 10 -c 50 -o $domain/endp/katana.txt
+   cat $domain/final_domains/all-httpx | katana -jc -kf all -d 3 -fs rdn -rlm 10 -c 50 -o $domain/endp/katana.txt
 else
    echo $domain | katana -jc -kf all -d 3 -fs rdn -rlm 10 -c 50 -o $domain/endp/katana.txt
 fi
