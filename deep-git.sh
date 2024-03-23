@@ -33,9 +33,10 @@ CNC='\033[1;38;5;051m'
 
 
 read -p "Enter domain name : " domain
+echo " "
+read -p "Enter github access token : " $token
 
-
-github-subdomains -d $domain/diff-scans/.com -e -t github_token -o $domain/diff-scans/git-subs
+github-subdomains -d $domain/diff-scans/.com -e -t $token -o $domain/diff-scans/git-subs
 
 shuffledns -d $domain -list $domain/diff-scans/git-subs -r ~/tools/resolvers/resolver.txt -o $domain/diff-scans/shuffledns
 

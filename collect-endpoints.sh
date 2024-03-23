@@ -33,10 +33,12 @@ CNC='\033[1;38;5;051m'
 
 
 read -p "Enter domain name : " domain
+echo " "
+read -p "Enter github access token : " $token
 #passive: using waymore search on wayback machine(archive.org)common crawal alienvault.com {include api keys: virustotal,urlscan}
 waymore -i $domain -mode U -oU endp/waymore.txt  #gets urls without download contents
 #passive using github-endpoints
-github-endpoints -q -k -d target.com -t git_token -o $domain/endp/github-endpoints.txt
+github-endpoints -q -k -d target.com -t $token -o $domain/endp/github-endpoints.txt
 #passive using porch-pirate endpoints on postman.com sources
 #porch-pirate -s $domain --urls > porch-pirate-urls
 #active: katana from reconftw project .. https://github.com/six2dez/reconftw
