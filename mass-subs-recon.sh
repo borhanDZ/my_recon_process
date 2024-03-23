@@ -60,7 +60,7 @@ if [ -d /$domain/ ]
 then
   echo " "
 else
-  mkdir -p $domain $domain/domain_enum $domain/final_domains $domain/takeovers $domain/diff-scans
+  mkdir -p $domain $domain/domain_enum $domain/final_domains $domain/takeovers $domain/deep-scans $domain/endp
 fi
 
 function Ammas {
@@ -105,6 +105,17 @@ function Shuffledns {
 	echo -e ${CN}"\n[+] Shuffledns Enumeration Started:- "
     shuffledns -d $domain -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-20000.txt -r ~/tools/resolvers/resolver.txt -o $domain/domain_enum/shuffledns.txt
 }
+
+function csp_ssl_subs {
+	clear
+    cat $domain/final_domains/all-resolved.txt | httpx -u mail.yahoo.com -csp-probe -silent -retries 2 | grep $domain | unfurl -u domains | sort -u > $domain/domain_enum/csp_sub.txt
+	cat $domain/final_domains/all-resolved.txt | httpx -u mail.yahoo.com -tls-probe -silent -retries 2 | grep $domain | unfurl -u domains | sort -u > $domain/domain_enum/ssl_sub.txt
+	cat $domain/domain_enum/csp_sub.txt | sort -u | anew -q $domain/final_domains/all-resolved.txt
+	cat $domain/domain_enum/ssl_sub.txt | sort -u | anew -q $domain/final_domains/all-resolved.txt
+
+    #cat subdomains.txt | httpx -csp-probe -status-code -retries 2 -no-color | anew csp_probed.txt | cut -d ' ' -f1 | unfurl -u domains | anew -q csp_subdomains.txt
+}
+
 function Collect-Subdomains {
 	clear
     echo -e ${CP}"\n[+] Collecting All Subdomains Into Single File:- "
@@ -112,9 +123,20 @@ function Collect-Subdomains {
     echo " "
     echo -e ${BLUE}"\n[+] Resolving All Subdomains:- "
 	shuffledns -d $domain -list $domain/domain_enum/all.txt -o $domain/final_domains/all-resolved.txt -r ~/tools/resolvers/resolver.txt
+	echo " "
+	echo -e ${BLUE}"\n[+] Extract subs from SSLs and CSP Headers:- "
+	csp_ssl_subs;;
     echo " "
 	echo -e ${PINK}"\n[+] Checking Services On Subdomains:- "
-	cat $domain/final_domains/all-resolved.txt | httpx -threads 30 -o $domain/final_domains/all-httpx.txt
+	cat $domain/final_domains/all-resolved.txt | httpx -threads 30 -o $domain/final_domains/all-httpx
+	echo " "
+	echo -e ${PINK}"\n[+] Extract subdomain behind cdn/cloud/waf:- "
+	cat $domain/final_domains/all-resolved.txt | cdncheck  -o $domain/final_domains/bcloud-subs
+    echo " "
+	echo -e ${PINK}"\n[+] Extract subdomain behind self servers (Company):- "
+	grep -vf $domain/final_domains/bcloud-subs $domain/final_domains/all-resolved.txt >  $domain/final_domains/srv-subs
+	
+    #cat $domain/final_domains/srv-subs | httpx > 
 }
 
 function takeover_check {
@@ -124,7 +146,7 @@ function takeover_check {
 	subjack -w $domain/domain_enum/all.txt -t 100 -timeout 30 -o $domain/takeovers/subjack_takeover.txt -ssl
 	echo "${magenta} [+] Running nuclei for finding potential takeovers${reset}"
 	nuclei -update-templates
-	nuclei -l $domain/domain_enum/all.txt -t ~/tools/nuclei-templates/takeovers/ -o $domain/takeovers/nuclei_takeover.txt
+	nuclei -l $domain/domain_enum/all.txt -t ~/tools/nuclei-templates/http/takeovers/ -o $domain/takeovers/nuclei_takeover.txt
 }
 
 function fullscan {
@@ -140,13 +162,6 @@ function fullscan {
 	takeover_check;;
 }
 
-function csp_ssl_subs {
-	clear
-    httpx -u mail.yahoo.com -csp-probe -silent -retries 2 | unfurl -u domains | sort -u > csp_sub.txt
-	httpx -u mail.yahoo.com -tls-probe -silent -retries 2 | unfurl -u domains | sort -u > ssl_sub.txt
-
-    #cat subdomains.txt | httpx -csp-probe -status-code -retries 2 -no-color | anew csp_probed.txt | cut -d ' ' -f1 | unfurl -u domains | anew -q csp_subdomains.txt
-}
 
 function blcscan {
 	clear
