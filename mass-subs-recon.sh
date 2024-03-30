@@ -39,10 +39,6 @@ CNC='\033[1;38;5;051m'
 ${reset}\n"
 	echo -e "\tA. Ammas"
 	echo -e "\tB. Subfinder "
-	echo -e "\tC. Assetfinder"
-	echo -e "\tD. findomain-linux"
-	echo -e "\tE. cert.sh"
-	echo -e "\tF. certspotter"
 	echo -e "\tG. shuffledns"
 	echo -e "\tH. Collect and resolve all subdomain"
 	echo -e "\tI. Subdomain takeover"
@@ -53,59 +49,29 @@ ${reset}\n"
 	echo -en "\t\tEnter an Option: "
 	read -n 1 option
 }
-if [ -d /targets/$domain/ ];then
-   echo " "
-else
-   mkdir -p targets targets/$domain targets/$domain/domain_enum targets/$domain/final_domains targets/$domain/takeovers targets/$domain/deep-scans targets/$domain/endp
-fi
 
 function Ammas {
 	clear
     echo -e ${ORANGE}"\n[+] Amass Enumeration Started:- "
-    amass enum -passive -d targets/$domain -o targets/$domain/Subdomains/amass.txt
+    amass enum -passive -d $domain -o targets/$domain/Subdomains/amass.txt
 }
 
 function Subfinder {
 	clear
 	echo -e ${CP}"\n[+] subfinder Enumeration Started:- "
-	subfinder -d targets/$domain -o targets/$domain/domain_enum/subfinder.txt
-}
-
-function Assetfinder {
-	clear
-	echo -e ${yellow}"\n[+] Assetfinder Enumeration Started:- "
-        assetfinder -subs-only targets/$domain | tee targets/$domain/domain_enum/assetfinder.txt
-}
-
-
-function Findomain-linux {
-    clear
-	echo -e ${BLUE}"\n[+] findomain-linux Enumeration Started:- "
-        findomain-linux --target targets/$domain -u targets/$domain/domain_enum/findomain.txt
-}
-
-function Cert {
-	clear
-	echo -e ${CPO}"\n[+] Crt.sh Enumeration Started:- "
-	curl -s "https://crt.sh/?q=%.<domain>&output=json" | jq '.[].name_value' | sed 's/\"//g' | sed 's/\*\.//g' | sort -u > targets/$domain/domain_enum/crt.txt
-}
-
-function Certspotter {
-	clear
-	echo -e ${CPO}"\n[+] Certspotter Enumeration Started:- "
-	curl -s https://certspotter.com/api/v0/certs\?domain\=$1 | jq '.[].dns_names[]' | sed 's/\"//g' | sed 's/\*\.//g' | sort -u > targets/$domain/domain_enum/crt.txt
+	subfinder -d $domain -s all -o targets/$domain/domain_enum/subfinder.txt
 }
 
 function Shuffledns {
 	clear
 	echo -e ${CN}"\n[+] Shuffledns Enumeration Started:- "
-    shuffledns -d targets/$domain -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-20000.txt -r ~/tools/resolvers/resolver.txt -o targets/$domain/domain_enum/shuffledns.txt
+    shuffledns -d $domain -w ~/Tools/subdomains-top1million-+100000.txt -r ~/resolvers -o targets/$domain/domain_enum/shuffledns.txt
 }
 
 function csp_ssl_subs {
 	clear
-        cat targets/$domain/final_domains/all-resolved.txt | httpx -u mail.yahoo.com -csp-probe -silent -retries 2 | grep targets/$domain | unfurl -u domains | sort -u > targets/$domain/domain_enum/csp_sub.txt
-	cat targets/$domain/final_domains/all-resolved.txt | httpx -u mail.yahoo.com -tls-probe -silent -retries 2 | grep targets/$domain | unfurl -u domains | sort -u > targets/$domain/domain_enum/ssl_sub.txt
+        cat targets/$domain/final_domains/all-resolved.txt | httpx -u mail.yahoo.com -csp-probe -silent -retries 2 | grep $domain | unfurl -u domains | sort -u > targets/$domain/domain_enum/csp_sub.txt
+	cat targets/$domain/final_domains/all-resolved.txt | httpx -u mail.yahoo.com -tls-probe -silent -retries 2 | grep $domain | unfurl -u domains | sort -u > targets/$domain/domain_enum/ssl_sub.txt
 	cat targets/$domain/domain_enum/csp_sub.txt | sort -u | anew -q targets/$domain/final_domains/all-resolved.txt
 	cat targets/$domain/domain_enum/ssl_sub.txt | sort -u | anew -q targets/$domain/final_domains/all-resolved.txt
 
@@ -118,7 +84,7 @@ function Collect-Subdomains {
         cat targets/$domain/domain_enum/*.txt > targets/$domain/domain_enum/all.txt
         echo " "
         echo -e ${BLUE}"\n[+] Resolving All Subdomains:- "
-	shuffledns -d targets/$domain -list targets/$domain/domain_enum/all.txt -o targets/$domain/final_domains/all-resolved.txt -r ~/tools/resolvers/resolver.txt
+	shuffledns -d $domain -list targets/$domain/domain_enum/all.txt -o targets/$domain/final_domains/all-resolved.txt -r ~/resolvers
 	echo " "
 	echo -e ${BLUE}"\n[+] Extract subs from SSLs and CSP Headers:- "
 	csp_ssl_subs
@@ -138,8 +104,6 @@ function Collect-Subdomains {
 function takeover_check {
 	clear
 	echo -e ${CP}"\n[+] Searching For Subdomain TakeOver:- "
-	subzy -hide_fails -targets targets/$domain/domain_enum/all.txt | tee targets/$domain/takeovers/subzy_takeover.txt
-	subjack -w targets/$domain/domain_enum/all.txt -t 100 -timeout 30 -o targets/$domain/takeovers/subjack_takeover.txt -ssl
 	echo "${magenta} [+] Running nuclei for finding potential takeovers${reset}"
 	nuclei -update-templates
 	nuclei -l targets/$domain/domain_enum/all.txt -t ~/tools/nuclei-templates/http/takeovers/ -o targets/$domain/takeovers/nuclei_takeover.txt
@@ -149,17 +113,23 @@ function fullscan {
 	clear
 	Ammas
 	Subfinder
-	Assetfinder
-	Findomain-linux
-	Cert
-	Certspotter
 	Shuffledns
 	Collect-Subdomains
 	takeover_check
+	exit
 }
 
 
 read -p "Enter domain name : " domain
+if [ -z $domain ]; then
+  echo -e ${red}"\n[+] domain is empty."
+  exit
+elif [ -d targets/$domain/ ];then
+   echo -e ${ORANGE}"\n[+] $domain directory may be exist! "
+elif [ -n $domain ]; then
+   mkdir -p targets/$domain targets/$domain/domain_enum targets/$domain/final_domains targets/$domain/takeovers targets/$domain/deep-scans targets/$domain/endp
+fi
+
 
 while [ 1 ]
 do
